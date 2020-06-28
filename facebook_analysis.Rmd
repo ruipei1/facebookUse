@@ -210,6 +210,7 @@ age = read.csv(paste0(path, '0_surveys/tps12_scanner_study_age.csv'), stringsAsF
   select(TPS_ID, age, study_t, scanner_t)
 
 
+
 iri = read.csv(paste0(path, '0_surveys/iri_tps12.csv'), stringsAsFactors = FALSE)
 iri = iri %>%
   mutate(IRI_mean = rowMeans(select(iri, starts_with("IRI_")), na.rm = FALSE))
@@ -544,8 +545,105 @@ md = lm(neurosynth_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
 summ(md) 
 ```
 
+# 6. Link between neural activation in cyberball and NTS{.tabset}
+
+```{r}
+## function
+construct_coef_df_nts = function(dvs,df){
+  mds1 = lapply(dvs, function(x) {
+    lm(substitute(i ~ NTS_Belongingness + study_t + scanner_t, list(i = as.name(x))), data = df)
+})
+  sums1 = lapply(mds1, summary)
+  
+  mds2 = lapply(dvs, function(x) {
+    lm(substitute(i ~ NTS_SelfEsteem + study_t + scanner_t, list(i = as.name(x))), data = df)
+})
+  sums2 = lapply(mds2, summary)
+  
+  mds3 = lapply(dvs, function(x) {
+    lm(substitute(i ~ NTS_Control + study_t + scanner_t, list(i = as.name(x))), data = df)
+})
+  sums3 = lapply(mds3, summary)
+  
+  mds4 = lapply(dvs, function(x) {
+    lm(substitute(i ~ NTS_MeaningfulExistence + study_t + scanner_t, list(i = as.name(x))), data = df)
+})
+  sums4 = lapply(mds4, summary)
+
+  betas1 = c()
+  betas2 = c()
+  betas3 = c()
+  betas4 = c()
+  se1 = c()
+  se2 = c()
+  se3 = c()
+  se4 = c()
+  for (i in c(1:length(dvs))){
+    betas1 = c(betas1,sums1[[i]]$coefficients[2,1])
+    betas2 = c(betas2,sums2[[i]]$coefficients[2,1])
+    betas3 = c(betas3,sums3[[i]]$coefficients[2,1])
+    betas4 = c(betas4,sums4[[i]]$coefficients[2,1])
+    se1 = c(se1, sums1[[i]]$coefficients[2,2])
+    se2 = c(se2, sums2[[i]]$coefficients[2,2])
+    se3 = c(se3, sums3[[i]]$coefficients[2,2])
+    se4 = c(se4, sums4[[i]]$coefficients[2,2])
+  }
+  
+  coef_df = data.frame("IV" = c(rep("Belongingness", length(dvs)),
+                                rep("SelfEsteem", length(dvs)),
+                                rep("Control", length(dvs)),
+                                rep("MeaningfulExistence", length(dvs))),
+                       "DV" = c(dvs,dvs,dvs,dvs),
+                       "beta" = c(betas1, betas2,betas3,betas4),
+                       "se" = c(se1, se2,se3,se4))
+  coef_df = coef_df
+  return(coef_df)
+}
+```
+
+## Functional ROIS
+
+```{r}
+dvs = c("subacc_roi_mask","rInsula_roi_mask",
+        "lInsula_roi_mask", "functional_combined_roi_mask")
+
+coef_df = construct_coef_df_nts(dvs, df) %>%
+  mutate(DV = gsub("_roi_mask", "", DV))
+plot_coef_iri(coef_dv)
+```
+
+## Dufour mentalzing meta-analytic ROIS
+
+```{r}
+dvs = c("vmpfc_roi_mask","dmpfc_roi_mask","mmpfc_roi_mask", "precuneus_roi_mask",            "lTpj_roi_mask","rTpj_roi_mask" ,"rSts_roi_mask",
+        "saxe_combined_mask")
+coef_df = construct_coef_df_nts(dvs, df) %>%
+  mutate(DV = gsub("_roi_mask", "", DV))
+plot_coef_iri(coef_dv)
+```
+
+## Vijayakumar social exclusion meta-analytic ROIs
 
 
+```{r}
+dvs = c("adult_lIFG_mask","adult_vACC_mask",
+        "adult_posteriorCingulate_mask","adult_precuneus_mask",
+        "adult_precentralGyrus_mask" ,
+        "ado_lateralOFC_mask", "ado_vs_mask")
 
+coef_df = construct_coef_df_nts(dvs, df) %>%
+  mutate(DV = gsub("_mask", "", DV))
+plot_coef_iri(coef_dv)
+```
 
+## dACC ROIS
+
+```{r}
+dvs = c("rotge_dacc1_mask","rotge_dacc2_mask",
+        "dACC_anatomical")
+
+coef_df = construct_coef_df_nts(dvs, df) %>%
+  mutate(DV = gsub("_mask", "", DV))
+plot_coef_iri(coef_dv)
+```
 

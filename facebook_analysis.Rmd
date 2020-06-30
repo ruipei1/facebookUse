@@ -1,8 +1,10 @@
 ---
 title: "FACEBOOK use analysis"
-author: "[Rui Pei](https://www.asc.upenn.edu/people/rui-pei)"
+author: '[Rui Pei](https://www.asc.upenn.edu/people/rui-pei)'
 date: "`r Sys.Date()`"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     code_folding: hide
     df_print: paged

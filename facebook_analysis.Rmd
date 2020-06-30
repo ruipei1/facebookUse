@@ -438,9 +438,9 @@ ggdensity(df, x = "NTS_MeaningfulExistence",
    color = "study_t", fill = "study_t")
 ```
 
-# 3. Correlation matrix
+# 3. Correlation matrix (IRI + NTS)
 
-```{r}
+```{r message = FALSE, warning = FALSE}
 m = corstar(df[,c("IRI_Perspective_Taking","IRI_Fantasy",
               "IRI_Empathic_Concern","IRI_Personal_Distress",
               "NTS_Belongingness","NTS_SelfEsteem",

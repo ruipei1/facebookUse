@@ -440,6 +440,8 @@ ggdensity(df, x = "NTS_MeaningfulExistence",
 
 # 3. Correlation matrix (IRI + NTS)
 
+Stars indicate signiciant correlation, and (x) indicate p values. 
+
 ```{r message = FALSE, warning = FALSE}
 m = corstar(df[,c("IRI_Perspective_Taking","IRI_Fantasy",
               "IRI_Empathic_Concern","IRI_Personal_Distress",
@@ -517,10 +519,10 @@ coef_df = construct_coef_df(dvs, df) %>%
   mutate(DV = gsub("_roi_mask", "", DV))
 plot_coef_df(coef_dv)
 
-md = lm(saxe_combined_mask ~ fhab +age + study_t + scanner_t, data = df)
-summ(md, digits = 3) 
-
-ggscatter(df, "fhab", "dmpfc_roi_mask")
+# md = lm(saxe_combined_mask ~ fhab +age + study_t + scanner_t, data = df)
+# summ(md, digits = 3) 
+# 
+# ggscatter(df, "fhab", "dmpfc_roi_mask")
 ```
 
 ## Neurosynth mentalzing ROIS
@@ -544,10 +546,10 @@ coef_df = construct_coef_df(dvs, df) %>%
   mutate(DV = gsub("_mask", "", DV))
 plot_coef_df(coef_dv)
 
-md = lm(neurosynth_mask ~ fhab + age + study_t + scanner_t, data = df)
-summ(md, digits = 3) 
-
-ggscatter(df, "fhab", "neurosynth_mask")
+# md = lm(neurosynth_mask ~ fhab + age + study_t + scanner_t, data = df)
+# summ(md, digits = 3) 
+# 
+# ggscatter(df, "fhab", "neurosynth_mask")
 ```
 
 ## Vijayakumar social exclusion meta-analytic ROIs
@@ -591,8 +593,8 @@ coef_df = construct_coef_df_iri(dvs, df) %>%
   mutate(DV = gsub("_roi_mask", "", DV))
 plot_coef_iri(coef_dv)
 
-md = lm(saxe_combined_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
-summ(md) 
+# md = lm(saxe_combined_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
+# summ(md) 
 ```
 
 ##  Neurosynth regions
@@ -606,8 +608,8 @@ coef_df = construct_coef_df_iri(dvs, df) %>%
   mutate(DV = gsub("_roi_mask", "", DV))
 plot_coef_iri(coef_dv)
 
-md = lm(neurosynth_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
-summ(md) 
+# md = lm(neurosynth_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
+# summ(md) 
 ```
 
 # 7. Link between neural activation in cyberball and NTS{.tabset}

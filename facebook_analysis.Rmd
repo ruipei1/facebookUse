@@ -94,38 +94,54 @@ construct_coef_df = function(dvs,df){
   fhab_sums = lapply(fhab_mds, summary)
 
   femo_mds = lapply(dvs, function(x) {
-      lm(substitute(i ~ femo + study_t + scanner_t, list(i = as.name(x))), data = df)
+      lm(substitute(i ~ femo + study_t + scanner_t , list(i = as.name(x))), data = df)
   })
   femo_sums = lapply(femo_mds, summary)
   
+  fconnected_mds = lapply(dvs, function(x) {
+      lm(substitute(i ~ fconnected + study_t + scanner_t , list(i = as.name(x))), data = df)
+  })
+  fconnected_sums = lapply(fconnected_mds, summary)
+  
   fhab_betas = c()
   femo_betas = c()
+  fconnected_betas = c()
   fhab_se = c()
   femo_se = c()
+  fconnected_se = c()
   for (i in c(1:length(dvs))){
     fhab_betas = c(fhab_betas,fhab_sums[[i]]$coefficients[2,1])
     femo_betas = c(femo_betas,femo_sums[[i]]$coefficients[2,1] )
+    fconnected_betas = c(fconnected_betas,fconnected_sums[[i]]$coefficients[2,1] )
     fhab_se = c(fhab_se, fhab_sums[[i]]$coefficients[2,2])
     femo_se = c(femo_se, femo_sums[[i]]$coefficients[2,2])
+    fconnected_se = c(fconnected_se, fconnected_sums[[i]]$coefficients[2,2])
   }
   
-  coef_df = data.frame("IV" = c(rep("Habitual FB use", length(dvs)), rep("Emotional FB use", length(dvs))),
-                       "DV" = c(dvs,dvs),
-                       "beta" = c(fhab_betas, femo_betas),
-                       "se" = c(fhab_se, femo_se))
+  coef_df = data.frame("IV" = c(rep("Habitual FB use", length(dvs)), rep("Emotional FB use", length(dvs)), 
+                                rep("FB connectedness", length(dvs))),
+                       "DV" = c(dvs,dvs, dvs),
+                       "beta" = c(fhab_betas, femo_betas, fconnected_betas),
+                       "se" = c(fhab_se, femo_se,fconnected_se))
   coef_df = coef_df %>%
-  mutate(IV = factor(coef_df$IV, levels=c("Habitual FB use", "Emotional FB use")))
+  mutate(IV = factor(coef_df$IV, levels=c("Habitual FB use", "Emotional FB use", "FB connectedness")))
   return(coef_df)
 }
 
 plot_coef_df = function(coef_dv){
   g1 = ggplot(coef_df, aes(x=DV, y=beta, colour=IV)) + 
     geom_errorbar(aes(ymin= beta-1.96*se, ymax= beta+1.96*se), width=.1, position=pd) +
-    geom_point(position=pd) + theme_pubr() + 
-  scale_color_manual(values = c("Habitual FB use" = "dodgerblue", "Emotional FB use" = "forestgreen")) +
+    geom_point(position=pd) + theme_pubr()  +
    geom_hline(yintercept=0, linetype="dashed", 
                 color = "grey", size=1) + 
   rotate_x_text(45)
+  # g1 = ggplot(coef_df, aes(x=DV, y=beta, colour=IV)) + 
+  #   geom_errorbar(aes(ymin= beta-1.96*se, ymax= beta+1.96*se), width=.1, position=pd) +
+  #   geom_point(position=pd) + theme_pubr() + #+ 
+  # scale_color_manual(values = c("Habitual FB use" = "dodgerblue", "Emotional FB use" = "forestgreen")) 
+  #  geom_hline(yintercept=0, linetype="dashed", 
+  #               color = "grey", size=1) + 
+  # rotate_x_text(45)
   return(g1)
 }
 
@@ -239,9 +255,12 @@ socialMedia = socialMedia %>%
   mutate(TPS_ID = as.factor(TPS_ID)) %>%
   mutate_if(is.character,as.numeric) %>%
   mutate(fhab = rowMeans(.[,10:19], na.rm = FALSE),
-         femo = rowMeans(.[c(8,9,20:39)], na.rm = FALSE), ## include the two "feel connected" questions in Emotional FB use.
+         femo = rowMeans(.[c(8,9,20:39)], na.rm = FALSE),#20:39 ## include the two "feel connected" questions in Emotional FB use.
+         fconnected = rowMeans(.[c(8,9)], na.rm = FALSE),
+         femopost = rowMeans(.[c(20:39)], na.rm = FALSE),
          TPS_ID = as.character(TPS_ID)) %>%
-  select(TPS_ID, fhab, femo)
+  select(TPS_ID, fhab, femo,fconnected)
+
 
 cyber = read.csv(paste0(path, '0_cyberball/cyberball_roi.csv'), stringsAsFactors = FALSE) 
 
@@ -265,11 +284,18 @@ df = cyber %>%
 
 
 # Remove NAs
-df = df %>% drop_na(age,fhab,femo, NTS_Belongingness,
+df = df %>% drop_na(fhab,femo, NTS_Belongingness,
                     NTS_SelfEsteem, NTS_Control,
                     NTS_MeaningfulExistence, study_t, scanner_t,
                     IRI_Perspective_Taking, IRI_Fantasy, 
-                    IRI_Empathic_Concern, IRI_Personal_Distress)
+                    IRI_Empathic_Concern, IRI_Personal_Distress,
+                    fconnected)
+
+df = df[-which(df$TPS_ID == "TPS1P0009"),]
+
+#write.csv(df, "~/Downloads/facebook.csv", row.names = FALSE)
+
+df$Scan_ID
 ```
 
 # 1. Participants
@@ -361,9 +387,9 @@ rois = data.frame("name" = roi_names, "source" = source, "image" = imgs)
 
 
 rois %>% 
-  mutate(
-    image %>% pander::pandoc.image.return()
-    ) %>% 
+  # mutate(
+  #   image %>% pander::pandoc.image.return()
+  #   ) %>% 
   select(-image) %>%
   pander()
 ```
@@ -493,14 +519,40 @@ dvs = c("NTS_Belongingness","NTS_SelfEsteem",
 coef_df = construct_coef_df(dvs, df) %>%
   mutate(DV = gsub("NTS_", "", DV))
 plot_coef_df(coef_dv)
+
+md = lm(NTS_Belongingness ~ fconnected + study_t+  age , data = df)
+summary(md)
+
+ggscatter(df, "fconnected", "NTS_Belongingness")
+
 ```
 
 
 # 5. Linking FB use with neural data{.tabset}
 
+
 ## Functional ROIS
 
+ Functional ROIs (n = 59)
+ 
 ```{r}
+dvs = c("rtpj_froi_mask","ltpj_froi_mask","l_orbital_frontal_mask",
+        "subacc_ai_froi_mask", "dmpfc_froi_mask","occipital_mask","combined_froi_n59_mask")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  mutate(DV = gsub("_froi_mask", "", DV))
+
+ggplot(coef_df, aes(x=DV, y=beta, colour=IV)) + 
+    geom_errorbar(aes(ymin= beta-1.96*se, ymax= beta+1.96*se), width=.1, position=pd) +
+    geom_point(position=pd) + theme_pubr()  +
+   geom_hline(yintercept=0, linetype="dashed", 
+                color = "grey", size=1) + 
+  rotate_x_text(45)
+
+```
+
+
+```{r eval = FALSE}
 dvs = c("subacc_roi_mask","rInsula_roi_mask",
         "lInsula_roi_mask", "functional_combined_roi_mask")
 
@@ -563,20 +615,20 @@ dvs = c("adult_lIFG_mask","adult_vACC_mask",
 coef_df = construct_coef_df(dvs, df) %>%
   mutate(DV = gsub("_mask", "", DV))
 plot_coef_df(coef_dv)
+
+ggplot()
 ```
 
 ## dACC ROIS
 
 ```{r}
 dvs = c("rotge_dacc1_mask","rotge_dacc2_mask",
-        "dACC_anatomical")
+        "dACC_anatomical_mask","cacioppo_dacc_mask","sanity_check_dacc_mask")
 
 coef_df = construct_coef_df(dvs, df) %>%
   mutate(DV = gsub("_mask", "", DV))
 plot_coef_df(coef_dv)
 
-# md = lm(dACC_anatomical_mask ~ femo + age + study_t + scanner_t, data = df)
-# summary(md)
 ```
 
 # 6. Link between neural activation in mentalizing regions and IRI{.tabset}
@@ -671,8 +723,8 @@ construct_coef_df_nts = function(dvs,df){
 ## Functional ROIS
 
 ```{r}
-dvs = c("subacc_roi_mask","rInsula_roi_mask",
-        "lInsula_roi_mask", "functional_combined_roi_mask")
+dvs = c("rtpj_froi_mask","ltpj_froi_mask","l_orbital_frontal_mask",
+        "subacc_ai_froi_mask", "dmpfc_froi_mask","occipital_mask","combined_froi_n59_mask")
 
 coef_df = construct_coef_df_nts(dvs, df) %>%
   mutate(DV = gsub("_roi_mask", "", DV))
@@ -707,10 +759,12 @@ plot_coef_iri(coef_dv)
 
 ```{r}
 dvs = c("rotge_dacc1_mask","rotge_dacc2_mask",
-        "dACC_anatomical")
+        "dACC_anatomical_mask","cacioppo_dacc_mask")
 
 coef_df = construct_coef_df_nts(dvs, df) %>%
   mutate(DV = gsub("_mask", "", DV))
 plot_coef_iri(coef_dv)
+
+colnames(df)
 ```
 

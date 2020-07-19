@@ -259,7 +259,7 @@ socialMedia = socialMedia %>%
          fconnected = rowMeans(.[c(8,9)], na.rm = FALSE),
          femopost = rowMeans(.[c(20:39)], na.rm = FALSE),
          TPS_ID = as.character(TPS_ID)) %>%
-  select(TPS_ID, fhab, femo,fconnected)
+  select(TPS_ID, fhab, femo,fconnected,femopost )
 
 
 cyber = read.csv(paste0(path, '0_cyberball/cyberball_roi.csv'), stringsAsFactors = FALSE) 
@@ -291,9 +291,9 @@ df = df %>% drop_na(fhab,femo, NTS_Belongingness,
                     IRI_Empathic_Concern, IRI_Personal_Distress,
                     fconnected)
 
-df = df[-which(df$TPS_ID == "TPS1P0009"),]
+df = df[-which(df$TPS_ID == "TPS1P0009"),] # participant excluded due to movement
 
-#write.csv(df, "~/Downloads/facebook.csv", row.names = FALSE)
+write.csv(df, "~/Downloads/facebook.csv", row.names = FALSE)
 
 df$Scan_ID
 ```

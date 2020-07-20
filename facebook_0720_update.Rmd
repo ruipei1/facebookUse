@@ -1,0 +1,359 @@
+---
+title: "FB use analysis update"
+author: '[Rui Pei](https://www.asc.upenn.edu/people/rui-pei)'
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+```{r setup, warning=FALSE}
+rm(list = ls())
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(plyr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(kableExtra))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(pander))
+suppressPackageStartupMessages(library(jtools))
+
+source("~/Documents/GitHub/facebookUse/functions.R")
+pd <- position_dodge(0.3) # move them .05 to the left and right
+
+```
+
+
+```{r importWideData, warning = FALSE, message = FALSE}
+path =  "~/Box Sync/CurrentProjects_Penn/TPS12_BART/99_fomo/github/"
+setwd(path)
+## socialMedia data
+socialMedia = read.csv(paste0(path, '0_facebook/tps2_facebook.csv'),na.strings=c("","NA"), stringsAsFactors = FALSE)[-1,] 
+
+socialMedia = socialMedia %>% 
+  mutate(TPS_ID = as.factor(TPS_ID)) %>%
+  mutate_if(is.character,as.numeric) %>%
+  mutate(fhab = rowMeans(.[,10:19], na.rm = FALSE),
+         femo = rowMeans(.[c(8,9,20:39)], na.rm = FALSE),#20:39 ## include the two "feel connected" questions in Emotional FB use.
+         fconnected = rowMeans(.[c(8,9)], na.rm = FALSE),
+         femopost = rowMeans(.[c(20:39)], na.rm = FALSE),
+         TPS_ID = as.character(TPS_ID)) %>%
+  select(TPS_ID, fhab, femo,fconnected,femopost )
+
+
+cyber = read.csv(paste0(path, '0_cyberball/cyberball_roi.csv'), stringsAsFactors = FALSE) 
+
+age = read.csv(paste0(path, '0_surveys/tps12_scanner_study_age.csv'), stringsAsFactors = FALSE) %>%
+  select(TPS_ID, age, study_t, scanner_t)
+
+
+
+iri = read.csv(paste0(path, '0_surveys/iri_tps12.csv'), stringsAsFactors = FALSE)
+iri = iri %>%
+  mutate(IRI_mean = rowMeans(select(iri, starts_with("IRI_")), na.rm = FALSE))
+
+
+nts = read.csv(paste0(path, '0_surveys/nts.csv'), stringsAsFactors = FALSE)
+
+df = cyber %>%
+  left_join(socialMedia, by = "TPS_ID") %>%
+  left_join(age, by = "TPS_ID") %>%
+  left_join(iri, by = "TPS_ID") %>%
+  left_join(nts, by = "TPS_ID") 
+
+
+# Remove NAs
+df = df %>% drop_na(fhab,femo, NTS_Belongingness,
+                    NTS_SelfEsteem, NTS_Control,
+                    NTS_MeaningfulExistence, study_t, scanner_t,
+                    IRI_Perspective_Taking, IRI_Fantasy, 
+                    IRI_Empathic_Concern, IRI_Personal_Distress,
+                    fconnected)
+```
+
+***
+**Summary**
+
+I tried the updated functional ROIs as well as the meta-analytically defined dACC ROI (from Cacioppo et al) to see if neural activity is related to emotional FB use, and the findings are all null. 
+
+I then took a look at the Emotional FB use measure, and thought that a case might be made to split the "connectedness" items (e.g. I feel connected to my family members when I use Facebook.) and "emotional posting" items (e.g. I get an urge to post on Facebook from my computer or phone the moment when something makes me feel amused). Not only are these two sets of questions conecptually different, they also are not significantly associated with each other in our data. Previously we lumped these questions together as the Cronbach's alpha = 0.93 is pretty high, but this alpha is mostly driven by the fact that there were way more emotional posting questions (n = 20) than connectedness questions (n = 2). 
+
+In this update, the habitual FB use side of the story stays the same: we find that habitual FB use is associated with neural activity in mentalizing network during cyberball (exclude vs. include), and the habitual FB use is also associated with IRI-fantasy.
+
+With regards to the FB connectedness measure, we find that it is significantly associated with neural activity in 1) Cacioppo dACC ROI; and 2) Vijayakumar VS ROI. Note that the Vijayakumar et al., meta-analysis, they identified two clusters activated in Cyberball in Developmental sample (7-18 years): L lateral OFC and VS. FB connectedness is also positively associated with NTS-belongingness and IRI-empathic concern.
+
+With regards to FB emotional posting, there is no assoication between emotional posting and neural measures. FB emotional posting is positively associated with NTS-belongingness
+
+***
+
+
+
+## Update 1. Cacioppo ROI
+
+
+We added a dACC ROI, constructed using the Cacioppo et al., 2013 paper. Coords = (1, 17, 24), radius = 3mm.
+
+
+![](/Users/Rui/Box Sync/CurrentProjects_Penn/TPS12_BART/99_fomo/github/0_cyberball/png/cascioppo_roi.png)
+
+
+## Update 2. Splitting the emotional use questions. 
+
+We originally used an average of the following questions as an index of Emotional Facebook use:
+
+* I feel connected to my friends when I use Facebook.
+* I feel connected to my family members when I use Facebook.
+
+
+I get an urge to post on Facebook from my computer or phone the moment when … 
+
+* 1. something makes me feel amused
+* 2. something makes me feel surprised 
+* 3. something makes me feel awed 
+* 4. something makes me feel loved 
+* 5. something makes me feel proud
+* 6. something makes me feel excited
+* 7. something makes me feel grateful 
+* 8. something makes me feel happy
+* 9. something makes me feel inspired
+* 10. something makes me feel confident
+* 11. something makes me feel angry
+* 12. something makes me feel nervous 
+* 13. something makes me feel awkward 
+* 14. something makes me feel stressed
+* 15. something makes me feel jealous 
+* 16. something makes me feel lonely
+* 17. something makes me feel scared
+* 18. something makes me feel upset
+* 19. something makes me feel ashamed 
+* 20. something makes me feel guilty
+
+
+Although the original scale had decent Cronbach's alpha (alpha = .93), I decided to conduct some analyses that separated this scale into a connectedness measure (the first two questions), and an emotional posting measure (the 20 questions regarding posting). Note that the two measures (connectedness and emotional posting) are not significantly associated with each other. 
+
+```{r warning = FALSE, message = FALSE}
+ggscatter(df, "fconnected", "femopost",
+             add = "reg.line",  
+   conf.int = TRUE, # Add confidence interval
+   cor.coef = TRUE,
+   xlab = "FB connectedness", ylab = "FB emotional posting")
+```
+
+__Correlation matrix of the Facebook measures__
+
+```{r message = FALSE, warning = FALSE}
+m = corstar(df[,c("fhab","femo","fconnected","femopost")])
+
+m[c(1,2),2] = ""
+m[c(1:4),3] = ""
+m[c(1:6),4] = ""
+m[c(1:8),5] = ""
+
+
+df_m = as.data.frame(m[,1:4])
+rownames(df_m) = NULL
+kable(df_m) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+```
+
+## Updated analyses
+
+### 1. Habitual Facebook use
+
+#### 1.1 Habitual FB use is associated with mentalizing neural activation{.tabset}
+
+##### Neurosynth ROIs 
+
+```{r}
+df = df %>%
+  dplyr::rename(.,neurosynth_mask = ns_ment_mask,
+                ns_RSTS = ns_ment_clust1_mask,
+                ns_RTPJ = ns_ment_clust2_mask,
+                ns_DMPFC = ns_ment_clust3_mask,
+                ns_PCC = ns_ment_clust4_mask,
+                ns_VMPFC = ns_ment_clust5_mask,
+                ns_hippocampus = ns_ment_clust6_mask,
+                ns_LTPJ = ns_ment_clust7_mask,
+                ns_LSTS = ns_ment_clust8_mask)
+dvs = c("neurosynth_mask","ns_RSTS", "ns_RTPJ", 
+        "ns_DMPFC","ns_PCC" ,"ns_VMPFC",
+        "ns_hippocampus","ns_LTPJ","ns_LSTS")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  mutate(DV = gsub("_mask", "", DV)) %>%
+  mutate(DV = gsub("ns_", "", DV)) %>%
+  filter(IV == "Habitual FB use")
+plot_coef_df(coef_dv)
+```
+
+##### Dufour mentalzing meta-analytic ROIS
+
+```{r}
+
+dvs = c("vmpfc_roi_mask","dmpfc_roi_mask","mmpfc_roi_mask", "precuneus_roi_mask",            "lTpj_roi_mask","rTpj_roi_mask" ,"rSts_roi_mask",
+        "saxe_combined_mask")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  mutate(DV = gsub("_roi_mask", "", DV)) %>%
+  filter(IV == "Habitual FB use")
+plot_coef_df(coef_dv)
+```
+
+#### 1.2 Habitual FB use is associated with higher rating in IRI - fantasy subscale
+
+```{r}
+dvs = c("IRI_Perspective_Taking","IRI_Fantasy",
+                   "IRI_Empathic_Concern","IRI_Personal_Distress", "IRI_mean")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  mutate(DV = gsub("IRI_", "", DV)) %>%
+  filter(IV == "Habitual FB use")
+  
+
+plot_coef_df(coef_dv)
+```
+
+#### 1.3 Mentalizing neural activity NOT significantly associated with IRI-fantasy {.tabset}
+
+##### Neurosynth ROIs
+
+```{r}
+dvs = c("neurosynth_mask","ns_RSTS", "ns_RTPJ", 
+        "ns_DMPFC","ns_PCC" ,"ns_VMPFC",
+        "ns_hippocampus","ns_LTPJ","ns_LSTS")
+
+coef_df = construct_coef_df_iri(dvs, df) %>%
+  mutate(DV = gsub("_roi_mask", "", DV)) %>%
+    filter(DV == "neurosynth_mask")
+
+plot_coef_iri(coef_dv)
+
+# md = lm(neurosynth_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
+# summ(md) 
+```
+
+##### Dufour et al. meta-analytic ROIs
+
+```{r}
+dvs = c("vmpfc_roi_mask","dmpfc_roi_mask","mmpfc_roi_mask", "precuneus_roi_mask",            "lTpj_roi_mask","rTpj_roi_mask" ,"rSts_roi_mask",
+        "saxe_combined_mask")
+
+coef_df = construct_coef_df_iri(dvs, df) %>%
+  mutate(DV = gsub("_roi_mask", "", DV)) %>%
+  filter(DV == "saxe_combined_mask")
+plot_coef_iri(coef_dv)
+
+# md = lm(saxe_combined_mask ~ IRI_Fantasy + age + study_t + scanner_t, data = df)
+# summ(md) 
+```
+
+### 2. Facebook connectedness
+
+#### 2.1 Facebook connectedness is negatively associated with dACC neural activation{.tabset}
+
+##### Cacioppo ROI
+
+```{r message = FALSE, warning = FALSE, fig.width= 5, fig.height=4}
+md = lm(cacioppo_dacc_mask ~ fconnected + study_t + scanner_t + age, data = df)
+md0 = lm(cacioppo_dacc_mask ~ study_t + scanner_t + age, data = df)
+
+summ(md)
+df$cacioppo_dacc_mask_resid = md0$residuals
+ggscatter(df, "fconnected", "cacioppo_dacc_mask_resid", 
+                       add = "reg.line",  
+   conf.int = TRUE, # Add confidence interval
+   cor.coef = TRUE,
+   xlab = "FB connectedness",
+   ylab = "dACC activation (adjusted)")
+```
+
+##### Vijayakumar ROIs
+
+We found significant negative associations between Facebook connectedness and neural activation (exclude vs. include) in the VS. 
+
+```{r}
+dvs = c("ado_lateralOFC_mask", "ado_vs_mask")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  filter(IV == "FB connectedness")
+plot_coef_df(coef_dv)
+```
+
+##### Functional ROIs (NULL)
+
+
+```{r}
+dvs = c("rtpj_froi_mask","ltpj_froi_mask","subacc_ai_froi_mask",
+        "dmpfc_froi_mask","combined_froi_n59_mask")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  filter(IV == "FB connectedness")
+plot_coef_df(coef_dv)
+```
+
+
+#### 2.2 Facebook connectedness is associated with NTS-belongingness{.tabset}
+
+##### NTS
+
+```{r}
+dvs = c("NTS_Belongingness","NTS_SelfEsteem",
+        "NTS_Control", "NTS_MeaningfulExistence","NTS_Mean")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  mutate(DV = gsub("NTS_", "", DV)) %>%
+  filter(IV == "FB connectedness")
+plot_coef_df(coef_dv)
+
+```
+
+##### IRI
+
+```{r}
+dvs = c("IRI_Perspective_Taking","IRI_Fantasy",
+                   "IRI_Empathic_Concern","IRI_Personal_Distress", "IRI_mean")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  mutate(DV = gsub("IRI_", "", DV)) %>%
+  filter(IV == "FB connectedness")
+  
+
+plot_coef_df(coef_dv)
+
+# md = lm(IRI_Empathic_Concern ~ fconnected + study_t + scanner_t + age, data = df)
+# summ(md)
+```
+
+
+#### 2.3 VS neural activation is negatively associated with NTS {.tabset}
+
+
+```{r}
+dvs = c("cacioppo_dacc_mask","ado_vs_mask",
+        "ado_lateralOFC_mask")
+
+coef_df = construct_coef_df_nts(dvs, df) %>%
+  mutate(DV = gsub("_roi_mask", "", DV))
+plot_coef_iri(coef_dv)
+```
+
+
+*** 
+**Some questions**
+
+1. Mentalizing map: use the Dufour meta-analytic map or Neurosynth? I'm leaning towards Neurosynth because it's more updated (Dufour paper was in 2013).
+
+2. With regard to FB connectedness result, is it interesting/worth reporting? If so, should we focus on ROIs from Vijayakumar meta-analysis or Cacioppo one? I'm leaning towards Vijayakumar a bit more because it's adolescent specific (though age range is a bit wide).
+
+Thanks!!
+

@@ -519,12 +519,6 @@ dvs = c("NTS_Belongingness","NTS_SelfEsteem",
 coef_df = construct_coef_df(dvs, df) %>%
   mutate(DV = gsub("NTS_", "", DV))
 plot_coef_df(coef_dv)
-
-md = lm(NTS_Belongingness ~ fconnected + study_t+  age , data = df)
-summary(md)
-
-ggscatter(df, "fconnected", "NTS_Belongingness")
-
 ```
 
 

@@ -209,6 +209,7 @@ coef_df = construct_coef_df(dvs, df) %>%
 plot_coef_df(coef_dv)
 ```
 
+
 #### 1.2 Habitual FB use is associated with higher rating in IRI - fantasy subscale
 
 ```{r}

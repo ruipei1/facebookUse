@@ -78,6 +78,9 @@ df = df %>% drop_na(fhab,femo, NTS_Belongingness,
                     IRI_Perspective_Taking, IRI_Fantasy, 
                     IRI_Empathic_Concern, IRI_Personal_Distress,
                     fconnected)
+
+
+colnames(df)
 ```
 
 ***

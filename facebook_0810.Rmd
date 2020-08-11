@@ -1,0 +1,198 @@
+---
+title: "FB use analysis update"
+author: '[Rui Pei](https://www.asc.upenn.edu/people/rui-pei)'
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+```{r setup, warning=FALSE}
+rm(list = ls())
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(plyr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(kableExtra))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(pander))
+suppressPackageStartupMessages(library(jtools))
+
+source("~/Documents/GitHub/facebookUse/functions.R")
+pd <- position_dodge(0.3) # move them .05 to the left and right
+
+```
+
+
+```{r importWideData, warning = FALSE, message = FALSE}
+path =  "~/Box Sync/CurrentProjects_Penn/TPS12_BART/99_fomo/github/"
+setwd(path)
+## socialMedia data
+socialMedia = read.csv(paste0(path, '0_facebook/tps2_facebook.csv'),na.strings=c("","NA"), stringsAsFactors = FALSE)[-1,] 
+
+socialMedia = socialMedia %>% 
+  mutate(TPS_ID = as.factor(TPS_ID)) %>%
+  mutate_if(is.character,as.numeric) %>%
+  mutate(fhab = rowMeans(.[,10:19], na.rm = FALSE),
+         femo = rowMeans(.[c(8,9,20:39)], na.rm = FALSE),
+         fconnected = rowMeans(.[c(8,9)], na.rm = FALSE),
+         femopost = rowMeans(.[c(20:39)], na.rm = FALSE),
+         TPS_ID = as.character(TPS_ID)) %>%
+  select(TPS_ID, fhab, femo,fconnected,femopost )
+
+
+cyber = read.csv(paste0(path, '0_cyberball/cyberball_roi.csv'), stringsAsFactors = FALSE) 
+
+age = read.csv(paste0(path, '0_surveys/tps12_scanner_study_age.csv'), stringsAsFactors = FALSE) %>%
+  select(TPS_ID, age, study_t, scanner_t)
+
+
+
+iri = read.csv(paste0(path, '0_surveys/iri_tps12.csv'), stringsAsFactors = FALSE)
+iri = iri %>%
+  mutate(IRI_mean = rowMeans(select(iri, starts_with("IRI_")), na.rm = FALSE))
+
+
+nts = read.csv(paste0(path, '0_surveys/nts.csv'), stringsAsFactors = FALSE)
+
+df = cyber %>%
+  left_join(socialMedia, by = "TPS_ID") %>%
+  left_join(age, by = "TPS_ID") %>%
+  left_join(iri, by = "TPS_ID") %>%
+  left_join(nts, by = "TPS_ID") 
+
+
+# Remove NAs
+df = df %>% drop_na(fhab,femo, NTS_Belongingness,
+                    NTS_SelfEsteem, NTS_Control,
+                    NTS_MeaningfulExistence, study_t, scanner_t,
+                    IRI_Perspective_Taking, IRI_Fantasy, 
+                    IRI_Empathic_Concern, IRI_Personal_Distress,
+                    fconnected) %>% 
+  mutate(NTS_Belongingness = 7 - NTS_Belongingness,
+         NTS_SelfEsteem = 7 - NTS_SelfEsteem,
+         NTS_Control = 7 - NTS_Control,
+         NTS_MeaningfulExistence = 7 - NTS_MeaningfulExistence,
+         NTS_Mean = 7 - NTS_Mean)
+```
+
+# Method 
+
+Participant age
+
+```{r}
+tps1 = df %>% filter( study_t == "tps1")
+tps2 = df %>% filter( study_t == "tps2")
+round(mean(df$age),2)
+round(sd(df$age),2)
+
+round(mean(tps1$age),2)
+round(sd(tps1$age),2)
+
+round(mean(tps2$age),2)
+round(sd(tps2$age),2)
+
+t.test(tps1$age, tps2$age)
+```
+
+
+```{r}
+shapiro.test(df$fhab)
+shapiro.test(df$fconnected)
+shapiro.test(df$NTS_Mean)
+shapiro.test(df$IRI_Perspective_Taking)
+```
+
+
+
+# Results
+
+## 3.1 Facebook measures and need threat after social exclusion
+
+```{r}
+
+md1 = lm(NTS_Mean ~ fconnected +study_t +scanner_t +age, data = df)
+summ(md1, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+
+md2 = lm(NTS_Mean ~ fhab +study_t +scanner_t+age, data = df)
+summ(md2, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+
+dvs = c("NTS_Belongingness" ,"NTS_SelfEsteem","NTS_Control",
+        "NTS_MeaningfulExistence","NTS_Mean")
+coef_df = construct_coef_df(dvs, df) 
+plot_coef_df(coef_dv)
+```
+
+
+
+## 3.2 Facebook measures and perspective taking
+
+```{r}
+md3 = lm(IRI_Perspective_Taking ~ fconnected + study_t +scanner_t + age, data = df)
+summ(md3, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+md4 = lm(IRI_Perspective_Taking ~ fhab+ study_t +scanner_t + age , data = df)
+summ(md4, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+md3.1 = lm(IRI_Fantasy ~ fhab  +study_t +scanner_t+age , data = df)
+summ(md3.1, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+ggscatter(df, "fhab", "fconnected")
+
+dvs = c("IRI_Perspective_Taking", "IRI_Fantasy",
+        "IRI_Empathic_Concern", "IRI_Personal_Distress" , "IRI_mean")
+coef_df = construct_coef_df(dvs, df) 
+plot_coef_df(coef_dv)
+colnames(df)
+```
+
+## 3.3 Facebook measures and social pain activity
+
+```{r}
+
+md5 = lm(ado_lateralOFC_mask ~ fconnected +study_t +scanner_t + age, data = df)
+summ(md5, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+
+md5 = lm(ado_vs_mask ~ fconnected +study_t +scanner_t + age, data = df)
+summ(md5, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+
+
+md5 = lm(ado_lateralOFC_mask ~ fhab +study_t +scanner_t + age, data = df)
+summ(md5, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+md5 = lm(ado_vs_mask ~ fhab +study_t +scanner_t + age, data = df)
+summ(md5, vifs = TRUE,confint = TRUE, ci.width = 0.95)
+
+```
+
+## 3.4 Facebook measures and mentalizing activity
+
+```{r}
+md5 = lm(saxe_combined_mask ~ fconnected + study_t+scanner_t , data = df)
+summ(md5, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 2)
+md5 = lm(saxe_combined_mask ~ fhab +study_t +scanner_t + age, data = df)
+summ(md5, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+ggscatter(df, "fhab","saxe_combined_mask")
+
+```
+
+```{r}
+dvs = c("NTS_Mean", "IRI_Perspective_Taking", "IRI_Fantasy")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  filter(IV != "Emotional FB use")
+plot_coef_df(coef_dv)+ coord_flip()
+
+dvs = c("ado_vs_mask", "ado_lateralOFC_mask", "saxe_combined_mask")
+
+coef_df = construct_coef_df(dvs, df) %>%
+  filter(IV != "Emotional FB use")
+plot_coef_df(coef_dv) + coord_flip()
+
+```
+

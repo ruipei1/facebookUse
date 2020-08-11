@@ -1,7 +1,7 @@
 # facebookUse
 Investigating the link between Facebook use and functional neural activity.
 
-[Link to paper](https://docs.google.com/document/d/1t39q-43k76ROCdYG_A5wPMmsm5TkFuuAYGIN404wap4/edit?usp=sharing)
+[Link to paper](https://docs.google.com/document/d/1p0Fky0pZz1RUMb05-qyfKXwwtmXRbZVxl8dg6JDmnv0/edit?usp=sharing)
 
 
 To do's

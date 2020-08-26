@@ -186,13 +186,14 @@ dvs = c("NTS_Mean", "IRI_Perspective_Taking", "IRI_Fantasy")
 
 coef_df = construct_coef_df(dvs, df) %>%
   filter(IV != "Emotional FB use")
-plot_coef_df(coef_dv)+ coord_flip()
+g1 = plot_coef_df(coef_dv)+ coord_flip()
 
 dvs = c("ado_vs_mask", "ado_lateralOFC_mask", "saxe_combined_mask")
 
 coef_df = construct_coef_df(dvs, df) %>%
   filter(IV != "Emotional FB use")
-plot_coef_df(coef_dv) + coord_flip()
+g2 = plot_coef_df(coef_dv) + coord_flip()
 
+multiplot(g1, g2, cols = 1)
 ```
 

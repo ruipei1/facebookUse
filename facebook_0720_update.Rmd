@@ -319,6 +319,7 @@ coef_df = construct_coef_df(dvs, df) %>%
   filter(IV == "FB connectedness")
 plot_coef_df(coef_dv)
 
+
 ```
 
 ##### IRI

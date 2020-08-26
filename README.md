@@ -12,4 +12,20 @@ To do's
 
 - [x] Methods + Results
 
+- [ ] Get mean + SDs for throws in fair and unfair conditions
+
+- [ ] Calculate data normality using the Schmider method
+
+- [ ] Update models + results
+
+- [ ] Add FB use measure descriptive stats
+
+- [ ] Update figure 1
+
+- [ ] Update figure 2
+
+- [ ] Update table 1
+
+- [ ] Switch presentation sequence (Habitual vs. connected) to be consistent throughout
+
 - [ ] Intro + Discussion

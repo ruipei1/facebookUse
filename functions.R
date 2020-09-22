@@ -208,6 +208,82 @@ corstar <- function(x, y = NULL, use = "pairwise", method = "pearson", round = 3
   m                                     # return matrix
 }
 
+
+
+
+# Skewness and kurtosis and their standard errors as implement by SPSS
+#
+# Reference: pp 451-452 of
+# http://support.spss.com/ProductsExt/SPSS/Documentation/Manuals/16.0/SPSS 16.0 Algorithms.pdf
+# 
+# See also: Suggestion for Using Powerful and Informative Tests of Normality,
+# Ralph B. D'Agostino, Albert Belanger, Ralph B. D'Agostino, Jr.,
+# The American Statistician, Vol. 44, No. 4 (Nov., 1990), pp. 316-321
+
+spssSkewKurtosis=function(x) {
+  w=length(x)
+  m1=mean(x)
+  m2=sum((x-m1)^2)
+  m3=sum((x-m1)^3)
+  m4=sum((x-m1)^4)
+  s1=sd(x)
+  skew=w*m3/(w-1)/(w-2)/s1^3
+  sdskew=sqrt( 6*w*(w-1) / ((w-2)*(w+1)*(w+3)) )
+  kurtosis=(w*(w+1)*m4 - 3*m2^2*(w-1)) / ((w-1)*(w-2)*(w-3)*s1^4)
+  sdkurtosis=sqrt( 4*(w^2-1) * sdskew^2 / ((w-3)*(w+5)) )
+  mat=matrix(c(skew,kurtosis, sdskew,sdkurtosis), 2,
+             dimnames=list(c("skew","kurtosis"), c("estimate","se")))
+  return(mat)
+}
+
+
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+
 construct_coef_df_nts = function(dvs,df){
   mds1 = lapply(dvs, function(x) {
     lm(substitute(i ~ NTS_Belongingness + study_t + scanner_t, list(i = as.name(x))), data = df)
@@ -260,7 +336,36 @@ construct_coef_df_nts = function(dvs,df){
 }
 
 
-
+getWC_mat = function(text, w){
+  stopwords = c("just","usually","sometimes","something",
+                "also","every")
+  
+  docs <- Corpus(VectorSource(text))
+  
+  # Convert the text to lower case
+  docs <- tm_map(docs, content_transformer(tolower))
+  # Remove numbers
+  docs <- tm_map(docs, removeNumbers)
+  # Remove english common stopwords
+  docs <- tm_map(docs, removeWords, stopwords("english"))
+  # Remove your own stop word
+  # specify your stopwords as a character vector
+  docs <- tm_map(docs, removeWords, stopwords) 
+  # Remove punctuations
+  docs <- tm_map(docs, removePunctuation)
+  # Eliminate extra white spaces
+  docs <- tm_map(docs, stripWhitespace)
+  # Text stemming
+  # docs <- tm_map(docs, stemDocument)
+  
+  ## Build a term-document matrix
+  dtm <- TermDocumentMatrix(docs)
+  m <- as.matrix(dtm)
+  v <- sort(rowSums(m),decreasing=TRUE)
+  d <- data.frame(word = names(v),freq=v*w)
+  return(d)
+  
+}
 
 
 

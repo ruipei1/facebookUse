@@ -27,10 +27,10 @@ pd <- position_dodge(0.3) # move them .05 to the left and right
 
 
 ```{r importWideData, warning = FALSE, message = FALSE}
-path =  "~/Box Sync/CurrentProjects_Penn/TPS12_BART/99_fomo/github/"
+path =  "/Users/Rui/Box Sync/CurrentProjects_Penn/TPS12_BART/99_fomo/github (peirui@upenn.edu)/"
 setwd(path)
 ## socialMedia data
-socialMedia = read.csv(paste0(path, '0_facebook/tps2_facebook.csv'),na.strings=c("","NA"), stringsAsFactors = FALSE)[-1,] 
+socialMedia = read.csv(paste0(path, '0_facebook/tps2_facebook.csv'),na.strings=c("","NA"), stringsAsFactors = FALSE)[-1,]
 
 socialMedia = socialMedia %>% 
   mutate(TPS_ID = as.factor(TPS_ID),
@@ -42,16 +42,15 @@ socialMedia = socialMedia %>%
          femopost = rowMeans(.[c(20:39)], na.rm = FALSE),
          TPS_ID = as.character(TPS_ID),
          OpenF = as.character(OpenF)) %>%
-  select(TPS_ID, fhab, femo,fconnected,femopost, OpenF)
+  select(TPS_ID, fhab, femo,fconnected,femopost,ConnFri_2,ConnFam_2, OpenF)
   
+
 
 
 cyber = read.csv(paste0(path, '0_cyberball/cyberball_roi.csv'), stringsAsFactors = FALSE) 
 
-age = read.csv(paste0(path, '0_surveys/tps12_scanner_study_age.csv'), stringsAsFactors = FALSE) %>%
+age = read.csv(paste0(path, '0_surveys/demo.csv'), stringsAsFactors = FALSE) %>%
   select(TPS_ID, age, study_t, scanner_t)
-
-
 
 iri = read.csv(paste0(path, '0_surveys/iri_tps12.csv'), stringsAsFactors = FALSE)
 iri = iri %>%
@@ -66,7 +65,6 @@ df = cyber %>%
   left_join(iri, by = "TPS_ID") %>%
   left_join(nts, by = "TPS_ID") 
 
-
 # Remove NAs
 df = df %>% drop_na(fhab,femo, NTS_Belongingness,
                     NTS_SelfEsteem, NTS_Control,
@@ -80,6 +78,7 @@ df = df %>% drop_na(fhab,femo, NTS_Belongingness,
          NTS_MeaningfulExistence = 7 - NTS_MeaningfulExistence,
          NTS_Mean = 7 - NTS_Mean)
 ```
+
 
 # Method 
 
@@ -258,7 +257,6 @@ plot_coef_df(coef_dv)
 colnames(df)
 ```
 
-## 3.3 Facebook measures and social pain activity
 
 ```{r}
 md5 = lm(ado_rois_mask ~ fconnected + study_t +scanner_t + age, data = df)
@@ -348,21 +346,178 @@ total_wc2$freq = rowMeans(total_wc2 %>% select(-word),
 
 ```
 
-# Mediation models
+
+# Figures 
+
+## Figure 1
 
 ```{r}
-library(lavaan)
-model <- ' # direct effect
-             Y ~ c*X
-           # mediator
-             M ~ a*X
-             Y ~ b*M
-           # indirect effect (a*b)
-             ab := a*b
-           # total effect
-             total := c + (a*b)
-         '
-fit <- sem(model, data = df)
-summary(fit)
+f1.0 = lm(ado_vs_mask ~ study_t + scanner_t + age, data = df)
+f1.1 = lm(ado_vs_mask ~ fconnected +study_t + scanner_t+age, data = df)
+f1.3 = lm(NTS_Mean ~ fconnected +study_t +age, data = df)
+summ(f1.3, digits = 2, confint = TRUE)
+f1.3 = lm(NTS_Mean ~ fhab +study_t +age, data = df)
+summ(f1.3, digits = 2, confint = TRUE)
+df$ado_vs_mask_resid = f1.0$residuals
+
+
+f2.0 = lm(ado_lateralOFC_mask ~ study_t + scanner_t + age, data = df)
+f2.1 = lm(ado_lateralOFC_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$ado_lateralOFC_mask_resid = f2.0$residuals
+summ(f2.1, digits = 2, confint = TRUE)
+
+ggscatter(df, "fconnected", "ado_vs_mask_resid",
+          color = "#003C67FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#003C67FF", fill = "#7AA6DCFF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "ado_lateralOFC_mask_resid",
+          color = "#A73030FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#A73030FF", fill = "#CD534CFF"), 
+   conf.int = TRUE)+ xlab("") + ylab("")
+
 ```
 
+## Figure 2
+
+```{r}
+f3.0 = lm(saxe_combined_mask ~ study_t + scanner_t + age, data = df)
+f3.1 = lm(saxe_combined_mask ~ fhab +study_t + scanner_t +age, data = df)
+
+summ(f3.1, digits = 3, confint = TRUE)
+df$saxe_combined_mask_resid = f3.0$residuals
+
+f4.0 = lm(dmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f4.1 = lm(dmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$dmpfc_roi_mask_resid = f4.0$residuals
+summ(f4.1, digits = 2, confint = TRUE)
+
+f5.0 = lm(lTpj_roi_mask ~ study_t + scanner_t + age, data = df)
+f5.1 = lm(lTpj_roi_mask~ fhab +study_t + scanner_t + age, data = df)
+df$lTpj_roi_mask_resid = f5.0$residuals
+summ(f5.1, digits = 2, confint = TRUE)
+
+
+f6.0 = lm(rTpj_roi_mask ~ study_t + scanner_t + age, data = df)
+f6.1 = lm(rTpj_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$rTpj_roi_mask_resid = f6.0$residuals
+summ(f6.1, digits = 3, confint = TRUE)
+
+
+f7.0 = lm(mmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f7.1 = lm(mmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$mmpfc_roi_mask_resid = f7.0$residuals
+summ(f7.1, digits = 2, confint = TRUE)
+
+ggscatter(df, "fhab", "saxe_combined_mask_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+
+ggscatter(df, "fhab", "dmpfc_roi_mask_resid",
+          color = "#20854ECC",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#20854EFF", fill = "#20854ECC"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "mmpfc_roi_mask_resid",
+          color = "#BB0021B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#BB0021FF", fill = "#BB0021B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "lTpj_roi_mask_resid",
+          color = "#E18727CC",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#E18727FF", fill = "#E18727CC"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "rTpj_roi_mask_resid",
+          color = "#631879B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#631879FF", fill = "#631879B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+library(scales)
+library(ggsci)
+show_col(pal_aaas("default")(10))
+show_col(pal_aaas("default", alpha = 0.7)(10))
+```
+
+
+# Tables
+
+
+## Table 2
+ fconnected predicting mentalizing ROIs
+
+```{r}
+md3.1 = lm(dmpfc_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.1 = summ(md3.1, vifs = FALSE,confint = TRUE, ci.width = 0.95, digits = 2)
+md3.2 = lm(mmpfc_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.2 = summ(md3.2, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.3 = lm(vmpfc_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.3 = summ(md3.3 , vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.4 = lm(precuneus_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.4 = summ(md3.4, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.5 = lm(lTpj_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.5 = summ(md3.5, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.6 = lm(rTpj_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.6 = summ(md3.6, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.7 = lm(rSts_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+sum3.7 = summ(md3.7, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+
+
+
+export_summs(md3.1, md3.2, md3.3, md3.4, md3.5,md3.6, md3.7,scale = FALSE,
+              error_format = "[{conf.low}, {conf.high}]",
+             to.file = "xlsx", file.name = "table2.xlsx")
+```
+
+## Table 3
+ fhab predicting social pain ROIs
+
+```{r}
+md5.1 = lm(ado_vs_mask ~ fhab +study_t +scanner_t + age, data = df)
+md5.2 = lm(ado_lateralOFC_mask ~ fhab +study_t +scanner_t + age, data = df)
+export_summs(md5.1, md5.2,scale = FALSE,
+              error_format = "[{conf.low}, {conf.high}]",
+             to.file = "xlsx", file.name = "table3.xlsx")
+```
+
+## Table 4
+ fconnected predicting mentalizing ROIs
+
+```{r}
+md3.1 = lm(dmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.1 = summ(md3.1, vifs = FALSE,confint = TRUE, ci.width = 0.95, digits = 2)
+md3.2 = lm(mmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.2 = summ(md3.2, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.3 = lm(vmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.3 = summ(md3.3 , vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.4 = lm(precuneus_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.4 = summ(md3.4, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.5 = lm(lTpj_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.5 = summ(md3.5, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.6 = lm(rTpj_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.6 = summ(md3.6, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+md3.7 = lm(rSts_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+sum3.7 = summ(md3.7, vifs = TRUE,confint = TRUE, ci.width = 0.95, digits = 3)
+
+
+
+export_summs(md3.1, md3.2, md3.3, md3.4, md3.5,md3.6, md3.7,scale = FALSE,
+              error_format = "[{conf.low}, {conf.high}]",
+             to.file = "xlsx", file.name = "table4.xlsx")
+```

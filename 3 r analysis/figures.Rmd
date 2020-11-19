@@ -1,0 +1,444 @@
+---
+title: "FB use analysis update"
+author: '[Rui Pei](https://www.asc.upenn.edu/people/rui-pei)'
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+```{r setup, warning=TRUE}
+rm(list = ls())
+
+if (!require("pacman")) install.packages("pacman",repos = "http://cran.us.r-project.org")
+pacman::p_load(ggplot2,ggpubr,tidyverse,plyr, dplyr, knitr, kableExtra, jtools,pander)
+
+source("~/Documents/GitHub/facebookUse/functions.R")
+pd <- position_dodge(0.3) # move them .05 to the left and right
+```
+
+
+```{r importWideData, warning = FALSE, message = FALSE}
+path =  "/Users/Rui/Box Sync/CurrentProjects_Penn/TPS12_BART/99_fomo/github (peirui@upenn.edu)/"
+setwd(path)
+## socialMedia data
+socialMedia = read.csv(paste0(path, '0_facebook/tps2_facebook.csv'),na.strings=c("","NA"), stringsAsFactors = FALSE)[-1,]
+
+socialMedia = socialMedia %>% 
+  mutate(TPS_ID = as.factor(TPS_ID),
+         OpenF = as.factor(OpenF)) %>%
+  mutate_if(is.character,as.numeric) %>%
+  mutate(fhab = rowMeans(.[,10:19], na.rm = FALSE),
+         femo = rowMeans(.[c(8,9,20:39)], na.rm = FALSE),
+         fconnected = rowMeans(.[c(8,9)], na.rm = FALSE),
+         femopost = rowMeans(.[c(20:39)], na.rm = FALSE),
+         TPS_ID = as.character(TPS_ID),
+         OpenF = as.character(OpenF)) %>%
+  select(TPS_ID, fhab, femo,fconnected,femopost,ConnFri_2,ConnFam_2, OpenF)
+  
+
+
+
+cyber = read.csv(paste0(path, '0_cyberball/cyberball_roi.csv'), stringsAsFactors = FALSE) 
+
+age = read.csv(paste0(path, '0_surveys/demo.csv'), stringsAsFactors = FALSE) %>%
+  select(TPS_ID, age, study_t, scanner_t)
+
+iri = read.csv(paste0(path, '0_surveys/iri_tps12.csv'), stringsAsFactors = FALSE)
+iri = iri %>%
+  mutate(IRI_mean = rowMeans(select(iri, starts_with("IRI_")), na.rm = FALSE))
+
+
+nts = read.csv(paste0(path, '0_surveys/nts.csv'), stringsAsFactors = FALSE)
+
+df = cyber %>%
+  left_join(socialMedia, by = "TPS_ID") %>%
+  left_join(age, by = "TPS_ID") %>%
+  left_join(iri, by = "TPS_ID") %>%
+  left_join(nts, by = "TPS_ID") 
+
+# Remove NAs
+df = df %>% drop_na(fhab,femo, NTS_Belongingness,
+                    NTS_SelfEsteem, NTS_Control,
+                    NTS_MeaningfulExistence, study_t, scanner_t,
+                    IRI_Perspective_Taking, IRI_Fantasy, 
+                    IRI_Empathic_Concern, IRI_Personal_Distress,
+                    fconnected) %>% 
+  mutate(NTS_Belongingness = 7 - NTS_Belongingness,
+         NTS_SelfEsteem = 7 - NTS_SelfEsteem,
+         NTS_Control = 7 - NTS_Control,
+         NTS_MeaningfulExistence = 7 - NTS_MeaningfulExistence,
+         NTS_Mean = 7 - NTS_Mean)
+```
+
+# Figure 1
+
+```{r}
+f3.0 = lm(ado_rois_mask ~ study_t + scanner_t + age, data = df)
+f3.1 = lm(ado_rois_mask ~ fconnected +study_t + scanner_t +age, data = df)
+summ(f3.1, digits = 2, confint = TRUE)
+df$ado_rois_mask_resid = f3.0$residuals
+
+f4.0 = lm(ado_lateralOFC_mask ~ study_t + scanner_t + age, data = df)
+f4.1 = lm(ado_lateralOFC_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$ado_lateralOFC_mask_resid = f4.0$residuals
+summ(f4.1, digits = 2, confint = TRUE)
+
+f5.0 = lm(ado_vs_mask ~ study_t + scanner_t + age, data = df)
+f5.1 = lm(ado_vs_mask~ fconnected +study_t + scanner_t + age, data = df)
+df$ado_vs_mask_resid = f5.0$residuals
+summ(f5.1, digits = 2, confint = TRUE)
+
+ggscatter(df, "fconnected", "ado_rois_mask_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "ado_lateralOFC_mask_resid",
+          color = "#E64B35B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#E64B35FF", fill = "#E64B35B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+
+ggscatter(df, "fconnected", "ado_vs_mask_resid",
+          color = "#3C5488B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3C5488FF", fill = "#3C5488B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+
+
+library(scales)
+library(ggsci)
+show_col(pal_npg("nrc")(10))
+show_col(pal_npg("nrc", alpha = 0.7)(10))
+```
+
+## Figure 2
+
+
+```{r}
+f3.0 = lm(saxe_combined_mask ~ study_t + scanner_t + age, data = df)
+f3.1 = lm(saxe_combined_mask ~ fconnected +study_t + scanner_t +age, data = df)
+summ(f3.1, digits = 3, confint = TRUE)
+df$saxe_combined_mask_resid = f3.0$residuals
+
+f4.0 = lm(dmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f4.1 = lm(dmpfc_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$dmpfc_roi_mask_resid = f4.0$residuals
+summ(f4.1, digits = 2, confint = TRUE)
+
+f5.0 = lm(lTpj_roi_mask ~ study_t + scanner_t + age, data = df)
+f5.1 = lm(lTpj_roi_mask~ fconnected +study_t + scanner_t + age, data = df)
+df$lTpj_roi_mask_resid = f5.0$residuals
+summ(f5.1, digits = 2, confint = TRUE)
+
+
+f6.0 = lm(rTpj_roi_mask ~ study_t + scanner_t + age, data = df)
+f6.1 = lm(rTpj_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$rTpj_roi_mask_resid = f6.0$residuals
+summ(f6.1, digits = 3, confint = TRUE)
+
+
+f7.0 = lm(mmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f7.1 = lm(mmpfc_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$mmpfc_roi_mask_resid = f7.0$residuals
+summ(f7.1, digits = 2, confint = TRUE)
+
+f8.0 = lm(vmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f8.1 = lm(vmpfc_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$vmpfc_roi_mask_resid = f8.0$residuals
+summ(f8.1, digits = 2, confint = TRUE)
+
+f9.0 = lm(rSts_roi_mask ~ study_t + scanner_t + age, data = df)
+f9.1 = lm(rSts_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$rSts_roi_mask_resid = f9.0$residuals
+summ(f9.1, digits = 2, confint = TRUE)
+
+f9.0 = lm(precuneus_roi_mask ~ study_t + scanner_t + age, data = df)
+f9.1 = lm(precuneus_roi_mask ~ fconnected +study_t + scanner_t + age, data = df)
+df$precuneus_roi_mask_resid = f9.0$residuals
+summ(f9.1, digits = 2, confint = TRUE)
+
+
+ggscatter(df, "fconnected", "saxe_combined_mask_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+
+ggscatter(df, "fconnected", "dmpfc_roi_mask_resid",
+          color = "#20854ECC",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#20854EFF", fill = "#20854ECC"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "mmpfc_roi_mask_resid",
+          color = "#BB0021B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#BB0021FF", fill = "#BB0021B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "lTpj_roi_mask_resid",
+          color = "#E18727CC",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#E18727FF", fill = "#E18727CC"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "rTpj_roi_mask_resid",
+          color = "#631879B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#631879FF", fill = "#631879B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "vmpfc_roi_mask_resid",
+          color = "#EE0000B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#EE0000FF", fill = "#EE0000B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "rSts_roi_mask_resid",
+          color = "#3B4992B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#3B4992FF", fill = "#3B4992B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fconnected", "precuneus_roi_mask_resid",
+          color = "#0073C2B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#0073C2FF", fill = "#0073C2B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+library(scales)
+library(ggsci)
+show_col(pal_jco("default")(10))
+show_col(pal_jco("default", alpha = 0.7)(10))
+```
+
+
+
+# Figure 3
+
+```{r}
+f3.0 = lm(ado_rois_mask ~ study_t + scanner_t + age, data = df)
+f3.1 = lm(ado_rois_mask ~ fhab +study_t + scanner_t +age, data = df)
+summ(f3.1, digits = 2, confint = TRUE)
+df$ado_rois_mask_resid = f3.0$residuals
+
+f4.0 = lm(ado_lateralOFC_mask ~ study_t + scanner_t + age, data = df)
+f4.1 = lm(ado_lateralOFC_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$ado_lateralOFC_mask_resid = f4.0$residuals
+summ(f4.1, digits = 2, confint = TRUE)
+
+f5.0 = lm(ado_vs_mask ~ study_t + scanner_t + age, data = df)
+f5.1 = lm(ado_vs_mask~ fhab +study_t + scanner_t + age, data = df)
+df$ado_vs_mask_resid = f5.0$residuals
+summ(f5.1, digits = 2, confint = TRUE)
+
+ggscatter(df, "fhab", "ado_rois_mask_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "ado_vs_mask_resid",
+          color = "#3C5488B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3C5488FF", fill = "#3C5488B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "ado_lateralOFC_mask_resid",
+          color = "#7E6148B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#7E6148FF", fill = "#7E6148B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+
+library(scales)
+library(ggsci)
+show_col(pal_npg("nrc")(10))
+show_col(pal_npg("nrc", alpha = 0.7)(10))
+```
+
+# Figure 4
+
+```{r}
+f3.0 = lm(NTS_Mean ~ study_t  + age, data = df)
+f3.1 = lm(NTS_Mean ~ fhab +study_t  +age, data = df)
+summ(f3.1, digits = 2, confint = TRUE)
+df$NTS_Mean_resid = f3.0$residuals
+
+
+ggscatter(df, "fhab", "NTS_Mean_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+library(scales)
+library(ggsci)
+show_col(pal_npg("nrc")(10))
+show_col(pal_npg("nrc", alpha = 0.7)(10))
+```
+
+# Figure 2c
+
+```{r}
+f3.0 = lm(saxe_combined_mask ~ study_t + scanner_t + age, data = df)
+f3.1 = lm(saxe_combined_mask ~ fhab +study_t + scanner_t +age, data = df)
+
+summ(f3.1, digits = 3, confint = TRUE)
+df$saxe_combined_mask_resid = f3.0$residuals
+
+f4.0 = lm(dmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f4.1 = lm(dmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$dmpfc_roi_mask_resid = f4.0$residuals
+summ(f4.1, digits = 2, confint = TRUE)
+
+f5.0 = lm(lTpj_roi_mask ~ study_t + scanner_t + age, data = df)
+f5.1 = lm(lTpj_roi_mask~ fhab +study_t + scanner_t + age, data = df)
+df$lTpj_roi_mask_resid = f5.0$residuals
+summ(f5.1, digits = 2, confint = TRUE)
+
+
+f6.0 = lm(rTpj_roi_mask ~ study_t + scanner_t + age, data = df)
+f6.1 = lm(rTpj_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$rTpj_roi_mask_resid = f6.0$residuals
+summ(f6.1, digits = 3, confint = TRUE)
+
+
+f7.0 = lm(mmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f7.1 = lm(mmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$mmpfc_roi_mask_resid = f7.0$residuals
+summ(f7.1, digits = 2, confint = TRUE)
+
+f8.0 = lm(vmpfc_roi_mask ~ study_t + scanner_t + age, data = df)
+f8.1 = lm(vmpfc_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$vmpfc_roi_mask_resid = f8.0$residuals
+summ(f8.1, digits = 2, confint = TRUE)
+
+f9.0 = lm(rSts_roi_mask ~ study_t + scanner_t + age, data = df)
+f9.1 = lm(rSts_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$rSts_roi_mask_resid = f9.0$residuals
+summ(f9.1, digits = 2, confint = TRUE)
+
+f9.0 = lm(precuneus_roi_mask ~ study_t + scanner_t + age, data = df)
+f9.1 = lm(precuneus_roi_mask ~ fhab +study_t + scanner_t + age, data = df)
+df$precuneus_roi_mask_resid = f9.0$residuals
+summ(f9.1, digits = 2, confint = TRUE)
+
+
+ggscatter(df, "fhab", "saxe_combined_mask_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+
+ggscatter(df, "fhab", "dmpfc_roi_mask_resid",
+          color = "#20854ECC",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#20854EFF", fill = "#20854ECC"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "mmpfc_roi_mask_resid",
+          color = "#BB0021B2",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#BB0021FF", fill = "#BB0021B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "lTpj_roi_mask_resid",
+          color = "#E18727CC",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#E18727FF", fill = "#E18727CC"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "rTpj_roi_mask_resid",
+          color = "#631879B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#631879FF", fill = "#631879B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "vmpfc_roi_mask_resid",
+          color = "#EE0000B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#EE0000FF", fill = "#EE0000B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "rSts_roi_mask_resid",
+          color = "#3B4992B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#3B4992FF", fill = "#3B4992B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+
+ggscatter(df, "fhab", "precuneus_roi_mask_resid",
+          color = "#0073C2B2",
+          size = 3, 
+          add = "reg.line",
+          add.params = list(color = "#0073C2FF", fill = "#0073C2B2"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+library(scales)
+library(ggsci)
+show_col(pal_jco("default")(10))
+show_col(pal_jco("default", alpha = 0.7)(10))
+```
+
+## Figure 5
+
+```{r}
+
+f3.0 = lm(NTS_Mean ~ study_t  + age, data = df)
+f3.1 = lm(NTS_Mean ~ fconnected +study_t  +age, data = df)
+summ(f3.1, digits = 2, confint = TRUE)
+df$NTS_Mean_resid = f3.0$residuals
+
+f3.0 = lm(NTS_Mean ~ study_t  + age, data = df)
+f3.1 = lm(NTS_Mean ~ fhab +study_t  +age, data = df)
+summ(f3.1, digits = 2, confint = TRUE)
+df$NTS_Mean_resid = f3.0$residuals
+
+ggscatter(df, "fconnected", "NTS_Mean_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+ggscatter(df, "fhab", "NTS_Mean_resid",
+          color = "#767676FF",
+          size = 3, alpha = 0.6,
+          add = "reg.line",
+          add.params = list(color = "#3F4041FF", fill = "#767676FF"), 
+   conf.int = TRUE) + xlab("") + ylab("")
+```
